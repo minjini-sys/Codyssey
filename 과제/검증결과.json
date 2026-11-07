@@ -1,0 +1,184 @@
+{
+  "method": "Node.js vm + 최소 DOM 모형. 실제 브라우저 및 CSS 레이아웃·file URL 저장 검증 아님.",
+  "results": [
+    {
+      "name": "2 원본 영화 8개 버튼 이동",
+      "result": "PASS",
+      "detail": [
+        {
+          "title": "기생충",
+          "moved": true
+        },
+        {
+          "title": "인터스텔라",
+          "moved": true
+        },
+        {
+          "title": "라라랜드",
+          "moved": true
+        },
+        {
+          "title": "센과 치히로의 행방불명",
+          "moved": false
+        },
+        {
+          "title": "어벤져스: 엔드게임",
+          "moved": false
+        },
+        {
+          "title": "범죄도시",
+          "moved": true
+        },
+        {
+          "title": "타이타닉",
+          "moved": true
+        },
+        {
+          "title": "토이 스토리",
+          "moved": false
+        }
+      ]
+    },
+    {
+      "name": "2 원본 제목 조건별 이동·끌기",
+      "result": "PASS",
+      "detail": [
+        {
+          "title": "새영화",
+          "tier": "B"
+        },
+        {
+          "title": "새 영화",
+          "tier": "pool"
+        },
+        {
+          "title": "콜론:테스트",
+          "tier": "B"
+        },
+        {
+          "title": "콜론: 테스트",
+          "tier": "pool"
+        },
+        {
+          "title": "인용 \"제목\"",
+          "tier": "pool"
+        },
+        {
+          "title": "<b>영화</b>",
+          "tier": "카드 불일치"
+        }
+      ]
+    },
+    {
+      "name": "2 수정 영화 8개 버튼 이동",
+      "result": "PASS",
+      "detail": [
+        {
+          "title": "기생충",
+          "moved": true
+        },
+        {
+          "title": "인터스텔라",
+          "moved": true
+        },
+        {
+          "title": "라라랜드",
+          "moved": true
+        },
+        {
+          "title": "센과 치히로의 행방불명",
+          "moved": true
+        },
+        {
+          "title": "어벤져스: 엔드게임",
+          "moved": true
+        },
+        {
+          "title": "범죄도시",
+          "moved": true
+        },
+        {
+          "title": "타이타닉",
+          "moved": true
+        },
+        {
+          "title": "토이 스토리",
+          "moved": true
+        }
+      ]
+    },
+    {
+      "name": "2 수정 제목 조건별 이동·끌기",
+      "result": "PASS",
+      "detail": [
+        {
+          "title": "새영화",
+          "tier": "B"
+        },
+        {
+          "title": "새 영화",
+          "tier": "B"
+        },
+        {
+          "title": "콜론:테스트",
+          "tier": "B"
+        },
+        {
+          "title": "콜론: 테스트",
+          "tier": "B"
+        },
+        {
+          "title": "인용 \"제목\"",
+          "tier": "B"
+        },
+        {
+          "title": "<b>영화</b>",
+          "tier": "B"
+        }
+      ]
+    },
+    {
+      "name": "2 수정 저장·재실행·초기화·빈 제목",
+      "result": "PASS",
+      "detail": "저장 모형을 전달한 새 실행에서 배치 복원, 빈 제목 차단, 초기화 성공"
+    },
+    {
+      "name": "4 원본 기존 기능 회귀",
+      "result": "PASS",
+      "detail": "기본 8개 이동, 추가, 저장 모형 재실행, 미분류 복귀, 끌기 이벤트, 빈 제목, 초기화 성공"
+    },
+    {
+      "name": "4 기능추가 기존 기능 회귀",
+      "result": "PASS",
+      "detail": "기본 8개 이동, 추가, 저장 모형 재실행, 미분류 복귀, 끌기 이벤트, 빈 제목, 초기화 성공"
+    },
+    {
+      "name": "4 칸별 개수",
+      "result": "PASS",
+      "detail": "0/8 → 1/7 → 추가 후 1/8 → 초기화 0/8"
+    },
+    {
+      "name": "3 피드백 열기 전 독립 검사",
+      "result": "PASS",
+      "detail": {
+        "move": "정상",
+        "blankCards": 1,
+        "beforeCount": 10,
+        "afterRestartCount": 8,
+        "afterRestartTier": "pool",
+        "afterResetCount": 8,
+        "layout": "실제 화면 확인 안 됨; CSS .page width:960px, body overflow-x:hidden 확인"
+      }
+    },
+    {
+      "name": "1 A 생성본 로직",
+      "result": "PASS",
+      "detail": "8개 초기화, S 이동, 제목 추가, 저장 모형 재실행, 빈 제목, 초기화 통과. 실제 브라우저 검사 아님"
+    },
+    {
+      "name": "1 B 생성본 로직",
+      "result": "PASS",
+      "detail": "8개 초기화, S 이동, 제목 추가, 저장 모형 재실행, 빈 제목, 초기화 통과. 실제 브라우저 검사 아님"
+    }
+  ]
+}
