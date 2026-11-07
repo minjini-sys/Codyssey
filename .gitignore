@@ -1,12 +1,1 @@
-.DS_Store
-Thumbs.db
-Desktop.ini
-node_modules/
-*.tmp
-*.crdownload
-.env
-.env.*
-!.env.example
-
-# 개인 작업일지는 로컬에만 보관
-/과제/history1.md
+**/[[]미션*[]]샘플과 코랩세션질문지/
