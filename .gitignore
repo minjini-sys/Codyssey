@@ -7,3 +7,6 @@ node_modules/
 .env
 .env.*
 !.env.example
+
+# 개인 작업일지는 로컬에만 보관
+/과제/history1.md
