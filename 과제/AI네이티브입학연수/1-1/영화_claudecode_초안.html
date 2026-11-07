@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>내 영화 티어리스트</title>
+<style>
+  :root {
+    --paper: #F4EFE4;
+    --card: #FFFDF8;
+    --ink: #1E1A16;
+    --muted: #665D52;
+    --line: #D8CFBE;
+    --t1: #C8341F;
+    --t2: #E3A32B;
+    --t3: #2F7A6B;
+    --t4: #5B6478;
+    --danger: #A92A18;
+    --bar-space: 0px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-padding-bottom: calc(var(--bar-space) + 16px); }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+    line-height: 1.5;
+    word-break: keep-all;
+    padding-bottom: calc(var(--bar-space) + 24px);
+  }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+  .page { max-width: 1040px; margin: 0 auto; padding: 28px 24px 0; }
+
+  /* 머리글 */
+  .top {
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
+    padding-bottom: 16px; margin-bottom: 20px; border-bottom: 3px solid var(--ink);
+  }
+  h1 { margin: 0; font-size: clamp(24px, 6vw, 40px); line-height: 1.15; font-weight: 800; letter-spacing: -0.03em; }
+  .hint { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+  .btn {
+    min-height: 44px; padding: 0 16px; border-radius: 8px; font-weight: 700;
+    border: 2px solid var(--ink); background: transparent; white-space: nowrap;
+  }
+  .btn:hover { background: var(--ink); color: var(--paper); }
+  .btn.solid { background: var(--ink); color: var(--paper); }
+  .btn.solid:hover { background: #3a332b; }
+
+  /* 등급 칸: 표를 뜯는 절취선 모양 */
+  .tiers { display: grid; gap: 12px; }
+  .tier {
+    display: grid; grid-template-columns: 124px minmax(0, 1fr);
+    background: var(--card); border-radius: 10px; overflow: hidden;
+    box-shadow: 0 0 0 1px var(--line);
+    transition: box-shadow .12s;
+  }
+  .tier-label {
+    position: relative; padding: 14px 12px; color: #fff; background: var(--tone);
+    display: flex; flex-direction: column; justify-content: center; gap: 2px;
+    border-right: 2px dashed var(--paper);
+  }
+  .tier-label::before, .tier-label::after {
+    content: ""; position: absolute; right: -9px; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--paper);
+  }
+  .tier-label::before { top: -8px; }
+  .tier-label::after { bottom: -8px; }
+  .tier-name { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; margin: 0; }
+  .tier-count { font-size: 13px; opacity: .9; }
+  .tier[data-tier="s"] { --tone: var(--t1); }
+  .tier[data-tier="a"] { --tone: var(--t2); }
+  .tier[data-tier="a"] .tier-label { color: var(--ink); }
+  .tier[data-tier="b"] { --tone: var(--t3); }
+  .tier[data-tier="c"] { --tone: var(--t4); }
+
+  .zone.over { box-shadow: 0 0 0 3px var(--ink); }
+
+  .cards {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px; padding: 12px; min-height: 104px; min-width: 0;
+  }
+  .empty {
+    grid-column: 1 / -1; align-self: center; margin: 0;
+    color: var(--muted); font-size: 14px; text-align: center;
+  }
+
+  /* 미분류 칸 */
+  .pool {
+    margin-top: 24px; border: 2px dashed #A99D89; border-radius: 10px;
+    transition: box-shadow .12s;
+  }
+  .pool-head {
+    display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
+    gap: 10px 20px; padding: 12px 12px 0;
+  }
+  .pool-head h2 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -0.02em; line-height: 44px; }
+  .pool-head h2 span { font-size: 13px; font-weight: 400; color: var(--muted); margin-left: 4px; letter-spacing: 0; }
+  .add { flex: 1 1 280px; max-width: 420px; min-width: 0; }
+  .add-row { display: flex; gap: 8px; }
+  .add input {
+    flex: 1; min-width: 0; min-height: 44px; padding: 0 12px;
+    border: 2px solid var(--ink); border-radius: 8px; background: var(--card);
+  }
+  .add input[aria-invalid="true"] { border-color: var(--danger); }
+  .add-msg { margin: 6px 0 0; font-size: 14px; font-weight: 700; color: var(--danger); }
+  .add-msg:empty { display: none; }
+
+  /* 영화 카드 */
+  .movie {
+    display: flex; flex-direction: column; min-width: 0;
+    background: var(--card); border-radius: 6px; overflow: hidden; cursor: grab;
+    box-shadow: 0 1px 3px rgba(30, 26, 22, .28);
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+    transition: transform .12s, box-shadow .12s;
+  }
+  .movie:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(30, 26, 22, .3); }
+  .movie:active { cursor: grabbing; }
+  .movie.dragging { opacity: .4; }
+  .movie[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--paper), 0 0 0 6px var(--ink); transform: none; }
+  .movie.landed { animation: land .35s ease-out; }
+  @keyframes land { from { transform: scale(.86); } to { transform: scale(1); } }
+  .poster { display: block; aspect-ratio: 2 / 3; width: 100%; background: #333; }
+  .poster svg { display: block; width: 100%; height: 100%; pointer-events: none; }
+  .movie-title {
+    padding: 6px 6px 7px; font-size: 13px; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em;
+    min-height: calc(2 * 1.3em + 13px); overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  }
+
+  /* 포스터가 없는 기본 카드 */
+  .movie.plain { background: var(--ink); color: var(--paper); }
+  .plain-face {
+    flex: 1; min-height: 150px; margin: 0 10px; padding: 10px 6px;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    background: #2D2720;
+  }
+  .movie.plain { position: relative; }
+  .movie.plain::before, .movie.plain::after {
+    content: ""; position: absolute; top: 4px; bottom: 4px; width: 5px;
+    background: repeating-linear-gradient(to bottom, var(--paper) 0 6px, transparent 6px 13px);
+  }
+  .movie.plain::before { left: 3px; }
+  .movie.plain::after { right: 3px; }
+  .plain-title {
+    font-size: 14px; font-weight: 800; line-height: 1.3; overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 6; overflow: hidden;
+  }
+
+  .note { margin: 20px 0 0; font-size: 12px; color: var(--muted); }
+
+  /* 선택한 카드의 조작 막대 */
+  .bar {
+    position: fixed; z-index: 10; left: 50%; bottom: 16px; transform: translateX(-50%);
+    width: min(720px, calc(100% - 32px)); padding: 10px 12px;
+    background: var(--ink); color: var(--paper); border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(30, 26, 22, .4);
+  }
+  .bar[hidden] { display: none; }
+  .bar-head { display: flex; align-items: center; gap: 8px; min-width: 0; margin-bottom: 8px; }
+  .bar-title { flex: 1; min-width: 0; font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-close {
+    flex: none; width: 32px; height: 32px; border: 0; border-radius: 6px;
+    background: transparent; color: var(--paper); font-size: 20px; line-height: 1;
+  }
+  .bar-close:hover { background: #3a332b; }
+  .bar-btns { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+  .bar-btns button {
+    min-height: 44px; padding: 0 4px; border: 0; border-radius: 8px;
+    background: var(--paper); color: var(--ink); font-weight: 700; font-size: 14px;
+  }
+  .bar-btns button:hover:not(:disabled) { background: #fff; }
+  .bar-btns button:disabled { background: #3a332b; color: #A99D89; cursor: default; }
+  .bar-btns .del { background: var(--danger); color: #fff; }
+  .bar-btns .del:hover:not(:disabled) { background: #C23420; }
+  .bar :focus-visible { outline-color: var(--t2); }
+
+  .toast {
+    position: fixed; z-index: 11; left: 50%; transform: translateX(-50%);
+    bottom: calc(var(--bar-space) + 16px);
+    max-width: calc(100% - 32px); padding: 8px 14px; border-radius: 8px;
+    background: var(--t3); color: #fff; font-size: 14px; font-weight: 700;
+    overflow-wrap: anywhere; text-align: center;
+  }
+  .toast:empty { display: none; }
+
+  /* 초기화 확인 */
+  dialog {
+    width: min(400px, calc(100% - 32px)); padding: 20px; border: 0; border-radius: 12px;
+    background: var(--card); color: var(--ink);
+  }
+  dialog::backdrop { background: rgba(30, 26, 22, .55); }
+  dialog h2 { margin: 0 0 6px; font-size: 19px; }
+  dialog p { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
+  .dialog-btns { display: flex; justify-content: flex-end; gap: 8px; }
+  .btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .btn.danger:hover { background: #C23420; border-color: #C23420; }
+
+  @media (max-width: 600px) {
+    .page { padding: 16px 16px 0; }
+    .top { align-items: flex-start; margin-bottom: 14px; }
+    .tier { grid-template-columns: minmax(0, 1fr); }
+    .tier-label {
+      flex-direction: row; align-items: baseline; justify-content: space-between;
+      padding: 8px 12px; border-right: 0;
+    }
+    .tier-label::before, .tier-label::after { display: none; }
+    .tier-name { font-size: 17px; }
+    .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px; min-height: 64px; }
+    .add { flex-basis: 100%; max-width: none; }
+    .bar { bottom: 8px; width: calc(100% - 16px); padding: 8px; }
+    .bar-btns { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .plain-face { min-height: 120px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .movie, .tier, .pool { transition: none; }
+    .movie:hover { transform: none; }
+    .movie.landed { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <div>
+      <h1>내 영화 티어리스트</h1>
+      <p class="hint">카드를 끌어다 놓거나, 카드를 누른 뒤 등급 버튼을 누르세요.</p>
+    </div>
+    <button class="btn" id="resetBtn" type="button">처음으로</button>
+  </header>
+
+  <main>
+    <div class="tiers" id="tiers"></div>
+
+    <section class="pool zone" data-tier="none" aria-labelledby="poolName">
+      <div class="pool-head">
+        <h2 id="poolName">미분류 <span id="poolCount"></span></h2>
+        <form class="add" id="addForm" novalidate>
+          <div class="add-row">
+            <input id="addInput" type="text" placeholder="새 영화 제목" aria-label="새 영화 제목" aria-describedby="addMsg" autocomplete="off">
+            <button class="btn solid" type="submit">추가</button>
+          </div>
+          <p class="add-msg" id="addMsg" role="alert"></p>
+        </form>
+      </div>
+      <div class="cards" data-cards="none"></div>
+    </section>
+  </main>
+
+  <p class="note" id="note">포스터는 이 페이지를 위해 직접 그린 일러스트이며 실제 영화 포스터가 아닙니다.</p>
+</div>
+
+<div class="bar" id="bar" role="group" aria-label="선택한 영화 옮기기" hidden>
+  <div class="bar-head">
+    <div class="bar-title" id="barTitle"></div>
+    <button class="bar-close" id="barClose" type="button" aria-label="선택 해제">×</button>
+  </div>
+  <div class="bar-btns" id="barBtns"></div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<dialog id="resetDialog" aria-labelledby="resetTitle">
+  <h2 id="resetTitle">처음 상태로 되돌릴까요?</h2>
+  <p>추가한 영화와 지금의 등급 배치가 모두 지워지고, 처음 영화 8편이 미분류로 돌아옵니다.</p>
+  <div class="dialog-btns">
+    <button class="btn" id="resetCancel" type="button">취소</button>
+    <button class="btn danger" id="resetOk" type="button">초기화</button>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  'use strict';
+
+  /* 포스터: HTML 안에 포함된 직접 그린 SVG. 외부 파일이나 인터넷이 필요 없습니다. */
+  var svg = function (body) {
+    return '<svg viewBox="0 0 200 300" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' + body + '</svg>';
+  };
+
+  var POSTERS = {
+    parasite: svg(
+      '<defs><linearGradient id="pa1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#DCE8C4"/><stop offset="1" stop-color="#7FA866"/></linearGradient></defs>' +
+      '<rect width="200" height="150" fill="url(#pa1)"/>' +
+      '<circle cx="158" cy="42" r="20" fill="#FFF3C9"/>' +
+      '<rect x="26" y="72" width="108" height="46" fill="#F7F4EC"/><rect x="18" y="64" width="124" height="9" fill="#2C2A26"/>' +
+      '<rect x="36" y="82" width="62" height="28" fill="#8FB7C4"/><rect x="108" y="82" width="16" height="36" fill="#55483A"/>' +
+      '<rect y="118" width="200" height="32" fill="#5E8A4B"/>' +
+      '<rect y="150" width="200" height="150" fill="#16140F"/>' +
+      '<path d="M0 150H44V176H76V202H108V228H140V254H172V280H200V300H0Z" fill="#3B342A"/>' +
+      '<path d="M0 150H44V152H0ZM44 176H76V178H44ZM76 202H108V204H76ZM108 228H140V230H108ZM140 254H172V256H140Z" fill="#6B5F4C"/>' +
+      '<rect x="128" y="166" width="52" height="30" fill="#E9C46A"/>' +
+      '<path d="M141 166v30M154 166v30M167 166v30" stroke="#16140F" stroke-width="3"/>'
+    ),
+    interstellar: svg(
+      '<defs><radialGradient id="in1"><stop offset=".55" stop-color="#FFB560" stop-opacity=".75"/><stop offset="1" stop-color="#FF7A1A" stop-opacity="0"/></radialGradient>' +
+      '<linearGradient id="in2" x1="0" x2="1"><stop offset="0" stop-color="#FF8A2B" stop-opacity="0"/><stop offset=".5" stop-color="#FFE9C2"/><stop offset="1" stop-color="#FF8A2B" stop-opacity="0"/></linearGradient></defs>' +
+      '<rect width="200" height="300" fill="#05060C"/>' +
+      '<g fill="#fff"><circle cx="22" cy="30" r="1"/><circle cx="60" cy="58" r="1.4"/><circle cx="170" cy="26" r="1.2"/><circle cx="142" cy="66" r=".9"/><circle cx="30" cy="214" r="1.2"/><circle cx="84" cy="250" r=".9"/><circle cx="178" cy="196" r="1"/><circle cx="16" cy="120" r=".9"/><circle cx="110" cy="24" r=".9"/><circle cx="58" cy="282" r="1.3"/></g>' +
+      '<circle cx="100" cy="130" r="82" fill="url(#in1)"/>' +
+      '<path d="M8 130a92 20 0 0 1 184 0" fill="none" stroke="url(#in2)" stroke-width="6"/>' +
+      '<circle cx="100" cy="130" r="44" fill="#000"/>' +
+      '<circle cx="100" cy="130" r="45" fill="none" stroke="#FFE3B8" stroke-width="2.5"/>' +
+      '<path d="M4 132a96 22 0 0 0 192 0" fill="none" stroke="url(#in2)" stroke-width="9"/>' +
+      '<path d="M146 240l12-5-3 12-3-4z" fill="#E8EDF5"/>'
+    ),
+    lalaland: svg(
+      '<defs><linearGradient id="la1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#17134A"/><stop offset=".6" stop-color="#6A3FA0"/><stop offset="1" stop-color="#F28CA0"/></linearGradient>' +
+      '<radialGradient id="la2"><stop offset="0" stop-color="#FFE9A8" stop-opacity=".85"/><stop offset="1" stop-color="#FFE9A8" stop-opacity="0"/></radialGradient></defs>' +
+      '<rect width="200" height="300" fill="url(#la1)"/>' +
+      '<path d="M150 34a30 30 0 1 0 22 50 25 25 0 1 1-22-50z" fill="#FFF0BE"/>' +
+      '<g fill="#FFF7DA"><circle cx="30" cy="36" r="1.6"/><circle cx="74" cy="22" r="1.1"/><circle cx="104" cy="58" r="1.5"/><circle cx="48" cy="86" r="1.1"/><circle cx="96" cy="118" r="1.2"/><circle cx="168" cy="134" r="1.3"/></g>' +
+      '<circle cx="42" cy="136" r="36" fill="url(#la2)"/>' +
+      '<path d="M42 232V140" stroke="#17134A" stroke-width="4"/><path d="M42 142q0-12 14-12" fill="none" stroke="#17134A" stroke-width="3"/>' +
+      '<circle cx="42" cy="136" r="7" fill="#FFF0BE"/>' +
+      '<rect y="228" width="200" height="72" fill="#FBF6E9"/>' +
+      '<path d="M25 228v72M50 228v72M75 228v72M100 228v72M125 228v72M150 228v72M175 228v72" stroke="#17134A" stroke-width="1.5"/>' +
+      '<g fill="#17134A"><rect x="17" y="228" width="16" height="42"/><rect x="42" y="228" width="16" height="42"/><rect x="92" y="228" width="16" height="42"/><rect x="117" y="228" width="16" height="42"/><rect x="142" y="228" width="16" height="42"/></g>'
+    ),
+    spirited: svg(
+      '<defs><linearGradient id="sp1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A1B4D"/><stop offset=".55" stop-color="#B8403C"/><stop offset=".8" stop-color="#F2A65A"/></linearGradient>' +
+      '<linearGradient id="sp2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E08A52"/><stop offset=".3" stop-color="#2C5470"/><stop offset="1" stop-color="#14283F"/></linearGradient></defs>' +
+      '<rect width="200" height="232" fill="url(#sp1)"/>' +
+      '<rect y="232" width="200" height="68" fill="url(#sp2)"/>' +
+      '<g fill="#6E1B1B"><path d="M100 46l34 26H66z"/><path d="M100 92l58 24H42z"/><path d="M100 140l78 26H22z"/></g>' +
+      '<g fill="#3C1414"><rect x="78" y="72" width="44" height="20"/><rect x="60" y="116" width="80" height="24"/><rect x="42" y="166" width="116" height="66"/></g>' +
+      '<g fill="#FFD27A"><rect x="86" y="77" width="8" height="10"/><rect x="106" y="77" width="8" height="10"/><rect x="70" y="122" width="10" height="12"/><rect x="95" y="122" width="10" height="12"/><rect x="120" y="122" width="10" height="12"/><rect x="54" y="176" width="14" height="18"/><rect x="80" y="176" width="14" height="18"/><rect x="106" y="176" width="14" height="18"/><rect x="132" y="176" width="14" height="18"/><rect x="88" y="204" width="24" height="28"/></g>' +
+      '<path d="M0 205q50 16 100 8t100-6" fill="none" stroke="#2A1B1B" stroke-width="1"/>' +
+      '<g fill="#F04E3A"><circle cx="16" cy="214" r="5"/><circle cx="38" cy="218" r="5"/><circle cx="168" cy="214" r="5"/><circle cx="188" cy="212" r="5"/></g>' +
+      '<path d="M70 246h60M84 258h34M92 270h18" stroke="#FFD27A" stroke-width="2.5" stroke-linecap="round" opacity=".7"/>'
+    ),
+    endgame: svg(
+      '<defs><radialGradient id="en1" cx=".5" cy=".42" r=".8"><stop offset="0" stop-color="#4B1D7E"/><stop offset=".6" stop-color="#1D0B38"/><stop offset="1" stop-color="#090410"/></radialGradient></defs>' +
+      '<rect width="200" height="300" fill="url(#en1)"/>' +
+      '<circle cx="100" cy="130" r="64" fill="none" stroke="#E7B84A" stroke-width="7" stroke-dasharray="240 18 62 28 40 200"/>' +
+      '<circle cx="100" cy="130" r="50" fill="none" stroke="#E7B84A" stroke-width="1.5" opacity=".5"/>' +
+      '<g stroke="#fff" stroke-opacity=".5"><path d="M100 62l10 10-10 12-10-12z" fill="#3D8BFF"/><path d="M158 96l10 10-10 12-10-12z" fill="#FF4040"/><path d="M158 158l10 10-10 12-10-12z" fill="#FF9A1F"/><path d="M100 188l10 10-10 12-10-12z" fill="#35C46A"/><path d="M42 158l10 10-10 12-10-12z" fill="#FFD93B"/><path d="M42 96l10 10-10 12-10-12z" fill="#B14CFF"/></g>' +
+      '<g fill="#E7B84A"><circle cx="120" cy="240" r="2.6"/><circle cx="134" cy="228" r="2"/><circle cx="148" cy="244" r="1.6"/><circle cx="160" cy="226" r="1.3"/><circle cx="170" cy="240" r="1"/><circle cx="180" cy="222" r=".8"/><circle cx="104" cy="256" r="2.2"/><circle cx="84" cy="266" r="2.8"/><circle cx="62" cy="272" r="2"/><circle cx="130" cy="262" r="1.4"/><circle cx="152" cy="268" r="1"/></g>'
+    ),
+    crime: svg(
+      '<defs><radialGradient id="cr1" cx=".15" cy="0" r=".9"><stop offset="0" stop-color="#E5232E" stop-opacity=".85"/><stop offset="1" stop-color="#E5232E" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="cr2" cx=".85" cy="0" r=".9"><stop offset="0" stop-color="#2A5BFF" stop-opacity=".7"/><stop offset="1" stop-color="#2A5BFF" stop-opacity="0"/></radialGradient></defs>' +
+      '<rect width="200" height="300" fill="#0F0A0D"/>' +
+      '<rect width="200" height="300" fill="url(#cr1)"/><rect width="200" height="300" fill="url(#cr2)"/>' +
+      '<path d="M0 300V214h28v-28h30v44h24v-62h36v50h22v-30h30v22h30v90z" fill="#050305"/>' +
+      '<g fill="#FFCF5C"><rect x="36" y="196" width="5" height="7"/><rect x="46" y="212" width="5" height="7"/><rect x="92" y="180" width="5" height="7"/><rect x="104" y="198" width="5" height="7"/><rect x="92" y="222" width="5" height="7"/><rect x="146" y="214" width="5" height="7"/><rect x="178" y="232" width="5" height="7"/><rect x="10" y="232" width="5" height="7"/></g>' +
+      '<g transform="rotate(-18 100 104)" fill="none" stroke="#D5DAE2"><circle cx="62" cy="104" r="28" stroke-width="9"/><circle cx="138" cy="104" r="28" stroke-width="9"/><path d="M90 104h20" stroke-width="7" stroke-dasharray="5 2.5"/></g>'
+    ),
+    titanic: svg(
+      '<defs><linearGradient id="ti1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#081529"/><stop offset="1" stop-color="#2B5F8A"/></linearGradient>' +
+      '<linearGradient id="ti2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#17395A"/><stop offset="1" stop-color="#061324"/></linearGradient></defs>' +
+      '<rect width="200" height="214" fill="url(#ti1)"/>' +
+      '<circle cx="46" cy="52" r="20" fill="#F2EFDD"/>' +
+      '<g fill="#fff"><circle cx="110" cy="30" r="1.1"/><circle cx="150" cy="60" r="1.3"/><circle cx="178" cy="26" r="1"/><circle cx="90" cy="76" r="1"/><circle cx="20" cy="104" r="1"/></g>' +
+      '<path d="M128 214l14-52 16 14 12-30 30 68z" fill="#DCEBF2"/><path d="M158 176l12-30 30 68h-34z" fill="#A9C9D9"/>' +
+      '<g fill="#C8761F"><rect x="30" y="128" width="11" height="32"/><rect x="50" y="128" width="11" height="32"/><rect x="70" y="128" width="11" height="32"/><rect x="90" y="128" width="11" height="32"/></g>' +
+      '<g fill="#14100D"><rect x="30" y="128" width="11" height="8"/><rect x="50" y="128" width="11" height="8"/><rect x="70" y="128" width="11" height="8"/><rect x="90" y="128" width="11" height="8"/></g>' +
+      '<rect x="14" y="158" width="104" height="16" fill="#EFE9DA"/>' +
+      '<path d="M4 172h130l-10 42H14z" fill="#14100D"/>' +
+      '<g fill="#FFD27A"><rect x="20" y="164" width="5" height="4"/><rect x="32" y="164" width="5" height="4"/><rect x="44" y="164" width="5" height="4"/><rect x="56" y="164" width="5" height="4"/><rect x="68" y="164" width="5" height="4"/><rect x="80" y="164" width="5" height="4"/><rect x="92" y="164" width="5" height="4"/><rect x="104" y="164" width="5" height="4"/></g>' +
+      '<rect y="214" width="200" height="86" fill="url(#ti2)"/>' +
+      '<path d="M16 232q12-6 24 0t24 0M96 248q12-6 24 0t24 0M28 268q12-6 24 0t24 0M126 280q12-6 24 0t24 0" fill="none" stroke="#6FA0C0" stroke-width="2" stroke-linecap="round"/>'
+    ),
+    toystory: svg(
+      '<rect width="200" height="300" fill="#58AEEB"/>' +
+      '<g fill="#fff"><ellipse cx="50" cy="52" rx="32" ry="15"/><ellipse cx="72" cy="42" rx="20" ry="14"/><ellipse cx="156" cy="100" rx="34" ry="15"/><ellipse cx="134" cy="90" rx="20" ry="13"/><ellipse cx="34" cy="146" rx="26" ry="11"/></g>' +
+      '<rect y="232" width="200" height="68" fill="#E6AF55"/>' +
+      '<path d="M0 252h200M0 276h200" stroke="#C9913A" stroke-width="2"/>' +
+      '<g font-family="Arial, sans-serif" font-weight="700" font-size="34" text-anchor="middle">' +
+      '<rect x="30" y="182" width="56" height="56" rx="4" fill="#E5403A"/><text x="58" y="222" fill="#fff">A</text>' +
+      '<rect x="90" y="182" width="56" height="56" rx="4" fill="#F4C430"/><text x="118" y="222" fill="#1E1A16">B</text>' +
+      '<rect x="60" y="126" width="56" height="56" rx="4" fill="#3C9D5B"/><text x="88" y="166" fill="#fff">C</text></g>' +
+      '<circle cx="164" cy="262" r="24" fill="#E5403A"/>' +
+      '<path d="M164 238a24 24 0 0 1 0 48z" fill="#F4C430"/>' +
+      '<path d="M141 256a24 24 0 0 0 46 0z" fill="#3D6FD9" opacity=".9"/>' +
+      '<path d="M150 150l6 14 15 1-12 9 4 15-13-8-13 8 4-15-12-9 15-1z" fill="#F4C430" stroke="#fff" stroke-width="2"/>'
+    )
+  };
+
+  var INITIAL = [
+    { id: 'm1', title: '기생충', poster: 'parasite' },
+    { id: 'm2', title: '인터스텔라', poster: 'interstellar' },
+    { id: 'm3', title: '라라랜드', poster: 'lalaland' },
+    { id: 'm4', title: '센과 치히로의 행방불명', poster: 'spirited' },
+    { id: 'm5', title: '어벤져스: 엔드게임', poster: 'endgame' },
+    { id: 'm6', title: '범죄도시', poster: 'crime' },
+    { id: 'm7', title: '타이타닉', poster: 'titanic' },
+    { id: 'm8', title: '토이 스토리', poster: 'toystory' }
+  ];
+
+  var TIERS = [
+    { key: 's', name: '인생영화' },
+    { key: 'a', name: '추천' },
+    { key: 'b', name: '보통' },
+    { key: 'c', name: '아쉬움' }
+  ];
+  var POOL = { key: 'none', name: '미분류' };
+  var ALL = TIERS.concat([POOL]);
+  var tierName = function (key) {
+    return ALL.filter(function (t) { return t.key === key; })[0].name;
+  };
+
+  /* 같은 컴퓨터의 다른 HTML과 저장 내용이 섞이지 않도록 이 파일만의 이름을 씁니다. */
+  var STORAGE_KEY = 'movie-tierlist-clodecod-draft-v1';
+
+  /* 영화마다 칸(tier)을 값 하나로만 가지므로 한 편이 두 칸에 있을 수 없습니다. */
+  var movies = [];
+  var selectedId = null;
+  var draggingId = null;
+  var landedId = null;
+  var storageOk = true;
+
+  function initialMovies() {
+    return INITIAL.map(function (m) {
+      return { id: m.id, title: m.title, poster: m.poster, tier: POOL.key };
+    });
+  }
+
+  function isValid(list) {
+    if (!Array.isArray(list)) return false;
+    var ids = {};
+    return list.every(function (m) {
+      if (!m || typeof m.id !== 'string' || typeof m.title !== 'string' || ids[m.id]) return false;
+      ids[m.id] = true;
+      var tierOk = ALL.some(function (t) { return t.key === m.tier; });
+      var posterOk = m.poster === null || Object.prototype.hasOwnProperty.call(POSTERS, m.poster);
+      return tierOk && posterOk;
+    });
+  }
+
+  function load() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (saved && isValid(saved.movies)) return saved.movies;
+    } catch (e) { /* 저장 내용을 읽을 수 없으면 처음 상태로 시작합니다. */ }
+    return initialMovies();
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ movies: movies }));
+      storageOk = true;
+    } catch (e) {
+      storageOk = false;
+    }
+    if (!storageOk) showToast('이 브라우저에서는 저장할 수 없어 다시 열면 사라집니다.');
+  }
+
+  var el = {
+    tiers: document.getElementById('tiers'),
+    poolCount: document.getElementById('poolCount'),
+    bar: document.getElementById('bar'),
+    barTitle: document.getElementById('barTitle'),
+    barBtns: document.getElementById('barBtns'),
+    barClose: document.getElementById('barClose'),
+    toast: document.getElementById('toast'),
+    form: document.getElementById('addForm'),
+    input: document.getElementById('addInput'),
+    msg: document.getElementById('addMsg'),
+    resetBtn: document.getElementById('resetBtn'),
+    dialog: document.getElementById('resetDialog'),
+    resetOk: document.getElementById('resetOk'),
+    resetCancel: document.getElementById('resetCancel')
+  };
+
+  /* 등급 칸과 조작 버튼 만들기 */
+  TIERS.forEach(function (t) {
+    var row = document.createElement('section');
+    row.className = 'tier zone';
+    row.dataset.tier = t.key;
+    row.setAttribute('aria-label', t.name);
+    row.innerHTML =
+      '<div class="tier-label"><h2 class="tier-name">' + t.name + '</h2><span class="tier-count" data-count="' + t.key + '"></span></div>' +
+      '<div class="cards" data-cards="' + t.key + '"></div>';
+    el.tiers.appendChild(row);
+  });
+
+  ALL.forEach(function (t) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.dataset.move = t.key;
+    b.textContent = t.name;
+    el.barBtns.appendChild(b);
+  });
+  var delBtn = document.createElement('button');
+  delBtn.type = 'button';
+  delBtn.className = 'del';
+  delBtn.textContent = '삭제';
+  el.barBtns.appendChild(delBtn);
+
+  function find(id) {
+    return movies.filter(function (m) { return m.id === id; })[0] || null;
+  }
+
+  function makeCard(m) {
+    var card = document.createElement('div');
+    card.className = 'movie' + (m.poster ? '' : ' plain') + (m.id === landedId ? ' landed' : '');
+    card.draggable = true;
+    card.tabIndex = 0;
+    card.dataset.id = m.id;
+    card.title = m.title;
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-pressed', String(m.id === selectedId));
+    card.setAttribute('aria-label', m.title + ', ' + tierName(m.tier));
+
+    if (m.poster) {
+      var poster = document.createElement('div');
+      poster.className = 'poster';
+      poster.innerHTML = POSTERS[m.poster];
+      var title = document.createElement('div');
+      title.className = 'movie-title';
+      title.textContent = m.title;
+      card.appendChild(poster);
+      card.appendChild(title);
+    } else {
+      var face = document.createElement('div');
+      face.className = 'plain-face';
+      var plain = document.createElement('div');
+      plain.className = 'plain-title';
+      plain.textContent = m.title;
+      face.appendChild(plain);
+      card.appendChild(face);
+    }
+    return card;
+  }
+
+  function render() {
+    ALL.forEach(function (t) {
+      var box = document.querySelector('[data-cards="' + t.key + '"]');
+      var list = movies.filter(function (m) { return m.tier === t.key; });
+      box.textContent = '';
+      list.forEach(function (m) { box.appendChild(makeCard(m)); });
+      if (!list.length) {
+        var empty = document.createElement('p');
+        empty.className = 'empty';
+        empty.textContent = t.key === POOL.key ? '모든 영화의 등급을 정했어요' : '비어 있음';
+        box.appendChild(empty);
+      }
+      var count = list.length + '편';
+      if (t.key === POOL.key) el.poolCount.textContent = count;
+      else document.querySelector('[data-count="' + t.key + '"]').textContent = count;
+    });
+    landedId = null;
+    renderBar();
+  }
+
+  function renderBar() {
+    var m = selectedId && find(selectedId);
+    el.bar.hidden = !m;
+    if (m) {
+      el.barTitle.textContent = m.title;
+      Array.prototype.forEach.call(el.barBtns.querySelectorAll('[data-move]'), function (b) {
+        b.disabled = b.dataset.move === m.tier;
+      });
+    }
+    var space = m ? el.bar.offsetHeight + 16 : 0;
+    document.documentElement.style.setProperty('--bar-space', space + 'px');
+  }
+
+  function focusCard(id) {
+    var card = document.querySelector('.movie[data-id="' + id + '"]');
+    if (card) card.focus({ preventScroll: true });
+    return card;
+  }
+
+  var toastTimer = null;
+  function showToast(text) {
+    el.toast.textContent = text;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.toast.textContent = ''; }, 2600);
+  }
+
+  function select(id) {
+    selectedId = selectedId === id ? null : id;
+    render();
+    var card = focusCard(id);
+    if (selectedId && card) card.scrollIntoView({ block: 'nearest' });
+  }
+
+  function clearSelection() {
+    var id = selectedId;
+    selectedId = null;
+    render();
+    if (id) focusCard(id);
+  }
+
+  function move(id, tier) {
+    var m = find(id);
+    if (!m || m.tier === tier) return;
+    movies = movies.filter(function (x) { return x.id !== id; });
+    m.tier = tier;
+    movies.push(m);
+    selectedId = null;
+    landedId = id;
+    save();
+    render();
+    focusCard(id);
+    if (storageOk) showToast(m.title + ' → ' + tierName(tier));
+  }
+
+  function remove(id) {
+    var m = find(id);
+    if (!m) return;
+    movies = movies.filter(function (x) { return x.id !== id; });
+    selectedId = null;
+    save();
+    render();
+    if (storageOk) showToast(m.title + ' 삭제됨');
+  }
+
+  function setAddMessage(text) {
+    el.msg.textContent = text;
+    if (text) el.input.setAttribute('aria-invalid', 'true');
+    else el.input.removeAttribute('aria-invalid');
+  }
+
+  el.form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var title = el.input.value.trim();
+    if (!title) {
+      setAddMessage('영화 제목을 입력해 주세요.');
+      el.input.value = '';
+      el.input.focus();
+      return;
+    }
+    if (movies.some(function (m) { return m.title === title; })) {
+      setAddMessage('‘' + title + '’은(는) 이미 목록에 있어요.');
+      el.input.focus();
+      return;
+    }
+    var id = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    movies.push({ id: id, title: title, poster: null, tier: POOL.key });
+    landedId = id;
+    el.input.value = '';
+    setAddMessage('');
+    save();
+    render();
+    el.input.focus();
+    if (storageOk) showToast(title + ' 추가됨');
+  });
+
+  el.input.addEventListener('input', function () { setAddMessage(''); });
+
+  /* 카드 선택 */
+  document.addEventListener('click', function (e) {
+    var card = e.target.closest('.movie');
+    if (card) select(card.dataset.id);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && selectedId && !el.dialog.open) { clearSelection(); return; }
+    var card = e.target.closest && e.target.closest('.movie');
+    if (card && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      select(card.dataset.id);
+    }
+  });
+
+  el.barBtns.addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b || b.disabled || !selectedId) return;
+    if (b === delBtn) remove(selectedId);
+    else move(selectedId, b.dataset.move);
+  });
+  el.barClose.addEventListener('click', clearSelection);
+
+  /* 드래그 이동 */
+  function clearOver() {
+    Array.prototype.forEach.call(document.querySelectorAll('.zone.over'), function (z) {
+      z.classList.remove('over');
+    });
+  }
+  document.addEventListener('dragstart', function (e) {
+    var card = e.target.closest && e.target.closest('.movie');
+    if (!card) return;
+    draggingId = card.dataset.id;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', draggingId);
+    card.classList.add('dragging');
+    if (selectedId) { selectedId = null; renderBar(); }
+  });
+  document.addEventListener('dragenter', function (e) {
+    if (draggingId && e.target.closest && e.target.closest('.zone')) e.preventDefault();
+  });
+  document.addEventListener('dragover', function (e) {
+    if (!draggingId) return;
+    var zone = e.target.closest && e.target.closest('.zone');
+    if (zone) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    }
+    if (!zone || !zone.classList.contains('over')) {
+      clearOver();
+      if (zone) zone.classList.add('over');
+    }
+  });
+  document.addEventListener('drop', function (e) {
+    if (!draggingId) return;
+    var zone = e.target.closest && e.target.closest('.zone');
+    if (!zone) return;
+    e.preventDefault();
+    var id = draggingId;
+    draggingId = null;
+    clearOver();
+    move(id, zone.dataset.tier);
+  });
+  document.addEventListener('dragend', function () {
+    draggingId = null;
+    clearOver();
+    Array.prototype.forEach.call(document.querySelectorAll('.movie.dragging'), function (c) {
+      c.classList.remove('dragging');
+    });
+  });
+
+  /* 처음으로 */
+  el.resetBtn.addEventListener('click', function () { el.dialog.showModal(); el.resetCancel.focus(); });
+  el.resetCancel.addEventListener('click', function () { el.dialog.close(); });
+  el.resetOk.addEventListener('click', function () {
+    movies = initialMovies();
+    selectedId = null;
+    el.input.value = '';
+    setAddMessage('');
+    save();
+    render();
+    el.dialog.close();
+    if (storageOk) showToast('처음 상태로 되돌렸어요');
+  });
+
+  window.addEventListener('resize', renderBar);
+
+  movies = load();
+  render();
+})();
+</script>
+</body>
+</html>
